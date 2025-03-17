@@ -24,7 +24,7 @@ import {
 import { ExternalLinkIcon } from "@chakra-ui/icons";
 import { useState } from "react";
 import { ColorModeToggle } from "../components/ColorModeToggle";
-import { ToastProvider } from "../components/Toast";
+import { ToastProvider, useToast } from "../components/Toast";
 import {
   connectKeplr,
   fetchBalance,
@@ -45,6 +45,7 @@ const Index = () => {
   const [txResult, setTxResult] = useState<any>(null);
   
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const toast = useToast();
   const bgColor = useColorModeValue("white", "gray.800");
   const borderColor = useColorModeValue("gray.200", "gray.700");
   
@@ -56,9 +57,19 @@ const Index = () => {
         setAddress(walletAddress);
         const balanceResult = await fetchBalance(walletAddress);
         setBalance(balanceResult);
+        toast({
+          variant: "success",
+          title: "Connected",
+          description: "Wallet connected successfully"
+        });
       }
     } catch (error) {
       console.error("Connection error:", error);
+      toast({
+        variant: "error",
+        title: "Connection Error",
+        description: error instanceof Error ? error.message : "Failed to connect to Keplr wallet"
+      });
     } finally {
       setIsConnecting(false);
     }
@@ -95,11 +106,21 @@ const Index = () => {
       const result = await sendAtom(address, recipient, amount);
       setTxResult(result);
       onOpen();
+      toast({
+        variant: "success",
+        title: "Transaction Successful",
+        description: "Your ATOM has been sent successfully"
+      });
       // Reset form
       setRecipient("");
       setAmount("");
     } catch (error) {
       console.error("Send error:", error);
+      toast({
+        variant: "error",
+        title: "Transaction Error",
+        description: error instanceof Error ? error.message : "Failed to send ATOM"
+      });
     } finally {
       setIsLoading(false);
     }
@@ -129,7 +150,7 @@ const Index = () => {
               <VStack spacing={4} align="stretch">
                 <Box>
                   <Text fontWeight="bold">Address:</Text>
-                  <Text fontSize="sm" isTruncated>{address}</Text>
+                  <Text fontSize="sm" noOfLines={1}>{address}</Text>
                 </Box>
                 <Box>
                   <Text fontWeight="bold">Balance:</Text>
@@ -180,7 +201,7 @@ const Index = () => {
               {txResult && (
                 <VStack align="stretch" spacing={3}>
                   <Text fontWeight="bold">Transaction Hash:</Text>
-                  <Text fontSize="sm" isTruncated>{txResult.txHash}</Text>
+                  <Text fontSize="sm" noOfLines={1}>{txResult.txHash}</Text>
                   <Button
                     as="a"
                     href={txResult.mintscanUrl}

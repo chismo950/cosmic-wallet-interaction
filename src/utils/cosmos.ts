@@ -1,6 +1,4 @@
 
-import { useToast } from "../components/Toast";
-
 // Constants for Cosmos Hub
 export const CHAIN_ID = "cosmoshub-4";
 export const DENOM = "uatom";
@@ -10,15 +8,10 @@ export const MINTSCAN_URL = "https://www.mintscan.io/cosmos";
 
 // Function to connect to Keplr wallet
 export const connectKeplr = async () => {
-  const toast = useToast();
   try {
     const keplrWindow = window;
     if (!keplrWindow.keplr) {
-      toast({
-        variant: "error",
-        title: "Keplr wallet not found",
-        description: "Please install Keplr wallet extension"
-      });
+      console.error("Keplr wallet not found");
       return null;
     }
     
@@ -27,18 +20,12 @@ export const connectKeplr = async () => {
     return key.bech32Address;
   } catch (error) {
     console.error("Error connecting to Keplr:", error);
-    toast({
-      variant: "error",
-      title: "Connection Error",
-      description: error instanceof Error ? error.message : "Failed to connect to Keplr wallet"
-    });
     return null;
   }
 };
 
 // Function to fetch balance
 export const fetchBalance = async (address: string) => {
-  const toast = useToast();
   try {
     const response = await fetch(`https://lcd-cosmoshub.keplr.app/cosmos/bank/v1beta1/balances/${address}`);
     if (!response.ok) {
@@ -61,11 +48,6 @@ export const fetchBalance = async (address: string) => {
     };
   } catch (error) {
     console.error("Error fetching balance:", error);
-    toast({
-      variant: "error",
-      title: "Balance Error",
-      description: error instanceof Error ? error.message : "Failed to fetch balance"
-    });
     throw error;
   }
 };
@@ -81,15 +63,10 @@ export const formatAtom = (amount: string) => {
 
 // Function to send ATOM
 export const sendAtom = async (senderAddress: string, recipientAddress: string, amount: string) => {
-  const toast = useToast();
   try {
     const keplrWindow = window;
     if (!keplrWindow.keplr) {
-      toast({
-        variant: "error",
-        title: "Keplr wallet not found",
-        description: "Please install Keplr wallet extension"
-      });
+      console.error("Keplr wallet not found");
       throw new Error("Keplr wallet not found");
     }
     
@@ -137,11 +114,6 @@ export const sendAtom = async (senderAddress: string, recipientAddress: string, 
     };
   } catch (error) {
     console.error("Error sending ATOM:", error);
-    toast({
-      variant: "error",
-      title: "Transaction Error",
-      description: error instanceof Error ? error.message : "Failed to send ATOM"
-    });
     throw error;
   }
 };

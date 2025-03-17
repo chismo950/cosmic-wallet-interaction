@@ -23,7 +23,6 @@ export const ToastProvider = ({ children }: { children: React.ReactNode }) => {
         status = "success";
         break;
       case "error":
-      case "destructive":
         status = "error";
         break;
       case "warning":
