@@ -1,103 +1,209 @@
 
+import {
+  Box,
+  Button,
+  Container,
+  Flex,
+  Heading,
+  Input,
+  Text,
+  VStack,
+  useColorModeValue,
+  FormControl,
+  FormLabel,
+  FormErrorMessage,
+  useDisclosure,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalFooter,
+  ModalBody,
+  ModalCloseButton,
+} from "@chakra-ui/react";
+import { ExternalLinkIcon } from "@chakra-ui/icons";
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { ConnectWallet } from "@/components/connect-wallet";
-import { BalanceDisplay } from "@/components/balance-display";
-import { TransferForm } from "@/components/transfer-form";
-import { type TransferFormValues } from "@/schemas/transfer";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { fetchBalance, sendAtom } from "@/utils/cosmos";
-import { TransactionResult } from "@/components/transaction-result";
-import { useToast } from "@/components/ui/use-toast";
+import { ColorModeToggle } from "../components/ColorModeToggle";
+import { ToastProvider } from "../components/Toast";
+import {
+  connectKeplr,
+  fetchBalance,
+  sendAtom,
+  isValidCosmosAddress,
+  DENOM_DISPLAY,
+} from "../utils/cosmos";
 
-export default function Index() {
-  const [address, setAddress] = useState<string | null>(null);
-  const [txResult, setTxResult] = useState<{ txHash: string; mintscanUrl: string } | null>(null);
-  const { toast } = useToast();
-
-  // Query for fetching balance
-  const {
-    data: balanceData,
-    isLoading: isBalanceLoading,
-    refetch: refetchBalance,
-  } = useQuery({
-    queryKey: ["balance", address],
-    queryFn: () => (address ? fetchBalance(address) : Promise.resolve({ amount: "0", formatted: "0" })),
-    enabled: !!address,
-  });
-
-  // Mutation for sending tokens
-  const { mutateAsync: sendTokens, isPending: isSending } = useMutation({
-    mutationFn: async (values: TransferFormValues) => {
-      if (!address) throw new Error("Wallet not connected");
-      return sendAtom(address, values.recipientAddress, values.amount);
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Transaction Successful",
-        description: `Successfully sent tokens. TX Hash: ${data.txHash.slice(0, 10)}...`,
-      });
-      setTxResult(data);
-      refetchBalance(); // Refresh balance after successful transaction
-    },
-  });
-
-  const handleConnect = (address: string) => {
-    setAddress(address);
-    setTxResult(null); // Reset transaction result when connecting
+const Index = () => {
+  const [address, setAddress] = useState("");
+  const [balance, setBalance] = useState({ amount: "0", formatted: "0" });
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [recipient, setRecipient] = useState("");
+  const [amount, setAmount] = useState("");
+  const [recipientError, setRecipientError] = useState("");
+  const [amountError, setAmountError] = useState("");
+  const [txResult, setTxResult] = useState<any>(null);
+  
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  const bgColor = useColorModeValue("white", "gray.800");
+  const borderColor = useColorModeValue("gray.200", "gray.700");
+  
+  const handleConnect = async () => {
+    setIsConnecting(true);
+    try {
+      const walletAddress = await connectKeplr();
+      if (walletAddress) {
+        setAddress(walletAddress);
+        const balanceResult = await fetchBalance(walletAddress);
+        setBalance(balanceResult);
+      }
+    } catch (error) {
+      console.error("Connection error:", error);
+    } finally {
+      setIsConnecting(false);
+    }
   };
-
-  const handleSubmitTransfer = async (values: TransferFormValues) => {
-    await sendTokens(values);
+  
+  const validateForm = () => {
+    let isValid = true;
+    
+    if (!recipient || !isValidCosmosAddress(recipient)) {
+      setRecipientError("Please enter a valid Cosmos address");
+      isValid = false;
+    } else {
+      setRecipientError("");
+    }
+    
+    if (!amount || parseFloat(amount) <= 0) {
+      setAmountError("Please enter a valid amount");
+      isValid = false;
+    } else if (parseFloat(amount) > parseFloat(balance.formatted)) {
+      setAmountError("Insufficient balance");
+      isValid = false;
+    } else {
+      setAmountError("");
+    }
+    
+    return isValid;
   };
-
-  const handleCloseResult = () => {
-    setTxResult(null);
+  
+  const handleSend = async () => {
+    if (!validateForm()) return;
+    
+    setIsLoading(true);
+    try {
+      const result = await sendAtom(address, recipient, amount);
+      setTxResult(result);
+      onOpen();
+      // Reset form
+      setRecipient("");
+      setAmount("");
+    } catch (error) {
+      console.error("Send error:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
-
+  
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
-      <div className="mx-auto max-w-5xl">
-        <header className="mb-8 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-foreground md:text-3xl">Cosmos Wallet</h1>
-          <div className="flex items-center space-x-4">
-            <ThemeToggle />
-            <ConnectWallet onConnect={handleConnect} isConnected={!!address} address={address || undefined} />
-          </div>
-        </header>
-
-        {address ? (
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="flex flex-col space-y-6">
-              <BalanceDisplay
-                balance={balanceData?.formatted || "0"}
-                isLoading={isBalanceLoading}
-                onRefresh={() => refetchBalance()}
-              />
+    <ToastProvider>
+      <Container maxW="container.md" py={8}>
+        <Flex justifyContent="flex-end" mb={4}>
+          <ColorModeToggle />
+        </Flex>
+        <VStack spacing={6} align="stretch">
+          <Box p={6} borderWidth="1px" borderRadius="lg" borderColor={borderColor} bg={bgColor}>
+            <Heading size="lg" mb={4}>Cosmos Wallet</Heading>
+            
+            {!address ? (
+              <Button
+                onClick={handleConnect}
+                isLoading={isConnecting}
+                loadingText="Connecting..."
+                size="lg"
+                width="full"
+              >
+                Connect Keplr Wallet
+              </Button>
+            ) : (
+              <VStack spacing={4} align="stretch">
+                <Box>
+                  <Text fontWeight="bold">Address:</Text>
+                  <Text fontSize="sm" isTruncated>{address}</Text>
+                </Box>
+                <Box>
+                  <Text fontWeight="bold">Balance:</Text>
+                  <Text fontSize="xl">{balance.formatted} {DENOM_DISPLAY}</Text>
+                </Box>
+                
+                <FormControl isInvalid={!!recipientError}>
+                  <FormLabel>Recipient Address</FormLabel>
+                  <Input
+                    value={recipient}
+                    onChange={(e) => setRecipient(e.target.value)}
+                    placeholder="cosmos1..."
+                  />
+                  {recipientError && <FormErrorMessage>{recipientError}</FormErrorMessage>}
+                </FormControl>
+                
+                <FormControl isInvalid={!!amountError}>
+                  <FormLabel>Amount ({DENOM_DISPLAY})</FormLabel>
+                  <Input
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="0.0"
+                    type="number"
+                    step="0.000001"
+                  />
+                  {amountError && <FormErrorMessage>{amountError}</FormErrorMessage>}
+                </FormControl>
+                
+                <Button
+                  onClick={handleSend}
+                  isLoading={isLoading}
+                  loadingText="Sending..."
+                  colorScheme="blue"
+                >
+                  Send {DENOM_DISPLAY}
+                </Button>
+              </VStack>
+            )}
+          </Box>
+        </VStack>
+        
+        <Modal isOpen={isOpen} onClose={onClose}>
+          <ModalOverlay />
+          <ModalContent>
+            <ModalHeader>Transaction Result</ModalHeader>
+            <ModalCloseButton />
+            <ModalBody>
               {txResult && (
-                <TransactionResult
-                  txHash={txResult.txHash}
-                  mintscanUrl={txResult.mintscanUrl}
-                  onClose={handleCloseResult}
-                />
+                <VStack align="stretch" spacing={3}>
+                  <Text fontWeight="bold">Transaction Hash:</Text>
+                  <Text fontSize="sm" isTruncated>{txResult.txHash}</Text>
+                  <Button
+                    as="a"
+                    href={txResult.mintscanUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    rightIcon={<ExternalLinkIcon />}
+                    variant="outline"
+                  >
+                    View on Mintscan
+                  </Button>
+                </VStack>
               )}
-            </div>
-            <TransferForm
-              onSubmit={handleSubmitTransfer}
-              balance={balanceData?.formatted || "0"}
-              isLoading={isBalanceLoading || isSending}
-            />
-          </div>
-        ) : (
-          <div className="flex h-[60vh] flex-col items-center justify-center space-y-4 rounded-lg border border-border bg-card p-8 text-center">
-            <h2 className="text-2xl font-semibold">Welcome to Cosmos Wallet</h2>
-            <p className="max-w-md text-muted-foreground">
-              Connect your Keplr wallet to view your balance and send ATOM to other addresses.
-            </p>
-            <ConnectWallet onConnect={handleConnect} isConnected={false} />
-          </div>
-        )}
-      </div>
-    </div>
+            </ModalBody>
+            <ModalFooter>
+              <Button colorScheme="blue" mr={3} onClick={onClose}>
+                Close
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+      </Container>
+    </ToastProvider>
   );
-}
+};
+
+export default Index;

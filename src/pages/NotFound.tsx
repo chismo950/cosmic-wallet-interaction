@@ -1,26 +1,39 @@
-import { useLocation } from "react-router-dom";
-import { useEffect } from "react";
+
+import {
+  Box,
+  Heading,
+  Text,
+  Button,
+  VStack,
+  Container,
+  useColorModeValue,
+} from "@chakra-ui/react";
+import { Link } from "react-router-dom";
 
 const NotFound = () => {
-  const location = useLocation();
-
-  useEffect(() => {
-    console.error(
-      "404 Error: User attempted to access non-existent route:",
-      location.pathname
-    );
-  }, [location.pathname]);
+  const bgColor = useColorModeValue("white", "gray.800");
+  const borderColor = useColorModeValue("gray.200", "gray.700");
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">404</h1>
-        <p className="text-xl text-gray-600 mb-4">Oops! Page not found</p>
-        <a href="/" className="text-blue-500 hover:text-blue-700 underline">
-          Return to Home
-        </a>
-      </div>
-    </div>
+    <Container maxW="container.md" py={16}>
+      <Box
+        p={8}
+        borderWidth="1px"
+        borderRadius="lg"
+        borderColor={borderColor}
+        bg={bgColor}
+        textAlign="center"
+      >
+        <VStack spacing={6}>
+          <Heading size="2xl">404</Heading>
+          <Heading size="md">Page Not Found</Heading>
+          <Text>The page you're looking for doesn't exist or has been moved.</Text>
+          <Button as={Link} to="/" colorScheme="blue">
+            Return Home
+          </Button>
+        </VStack>
+      </Box>
+    </Container>
   );
 };
 
