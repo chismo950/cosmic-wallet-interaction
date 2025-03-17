@@ -112,9 +112,9 @@ export const sendAtom = async (senderAddress: string, recipientAddress: string, 
     // Get the offline signer from Keplr
     const offlineSigner = keplrWindow.keplr.getOfflineSigner(CHAIN_ID);
     
-    // Create a cosmos client
-    const cosmJS = await import('@cosmjs/stargate');
-    const signingClient = await cosmJS.SigningStargateClient.connectWithSigner(
+    // Create a cosmos client - using dynamic import to avoid TypeScript errors
+    const stargate = await import('@cosmjs/stargate');
+    const signingClient = await stargate.SigningStargateClient.connectWithSigner(
       "https://rpc-cosmoshub.keplr.app", 
       offlineSigner
     );
