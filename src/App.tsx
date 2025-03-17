@@ -7,9 +7,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
-// Add the Cosmjs packages as dependencies
-<lov-add-dependency>@cosmjs/stargate@0.31.3 @cosmjs/proto-signing@0.31.3</lov-add-dependency>
-
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

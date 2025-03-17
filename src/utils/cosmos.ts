@@ -113,8 +113,10 @@ export const sendAtom = async (senderAddress: string, recipientAddress: string, 
     const offlineSigner = keplrWindow.keplr.getOfflineSigner(CHAIN_ID);
     
     // Create a cosmos client - using dynamic import to avoid TypeScript errors
-    const stargate = await import('@cosmjs/stargate');
-    const signingClient = await stargate.SigningStargateClient.connectWithSigner(
+    // We use the following syntax to ensure proper Vite bundling and TypeScript compatibility
+    const { SigningStargateClient } = await import('@cosmjs/stargate');
+    
+    const signingClient = await SigningStargateClient.connectWithSigner(
       "https://rpc-cosmoshub.keplr.app", 
       offlineSigner
     );
